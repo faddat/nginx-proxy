@@ -1,0 +1,50 @@
+#cloud-config
+# Adds SSH keys to the rancher user
+ssh_authorized_keys:
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDKY2tn+jx8sESXCaHrN+U4310oRfCqZc1KsmyKIFnOF7XF7CLAPyNeaQkVgLuHtZ7oPih4SKBeSQ/jET4GeTjMkkna2I9YwwWp9nfPnuQzyCvWJwzC4zRIjKoKAT34tsGID/l+R98jA1ApYwXsVBzKN1tNPP4OL7JagvT+B+dALmLtZuDmm+1X1oHpWeKmm9HzilMlesQ8cL5Scc2Ebdwv0JwBQZigXwBHwWjVdaRuIE0jBOI9htsr5UzVya4ryW4102SvrOLUZbkUr7coVXybfEStZp6Ubn50zjK1OOlsJYLme6cxsxqzNy/lZFxbhuJuF14PNPk0bcUXh6C9WDoT faddat@Jacobs-iMac.local
+write_files:
+  - path: /opt/rancher/bin/start.sh
+    permissions: "0755"
+    owner: root
+    content: |
+      #!/bin/bash
+      echo "I'm doing things on start"
+      curl -L git.io/weave -o /usr/local/bin/weave
+      chmod a+x /usr/local/bin/weave
+hostname: master
+rancher:
+  services:
+    nginxapp:
+      image: nginx
+      restart: always
+rancher:
+  network:
+    interfaces:
+      eth*:
+        dhcp: false
+      eth0:
+        address: 192.168.100.100/24
+        gateway: 192.168.100.1
+        mtu: 1500
+      # If this MAC address happens to match eth0, eth0 will be programmed to use DHCP.
+      "mac=ea:34:71:66:90:12:01":
+        dhcp: true
+    dns:
+      nameservers:
+        - 8.8.8.8
+        - 8.8.4.4
+rancher:
+  state:
+    fstype: auto
+    dev: LABEL=RANCHER_STATE
+    autoformat:
+    - /dev/sda
+rancher:
+  upgrade:
+    url: https://releases.rancher.com/os/releases.yml
+    image: rancher/os
+rancher:
+  docker:
+    tls_args: [--tlsverify, --tlscacert=ca.pem, --tlscert=server-cert.pem, --tlskey=server-key.pem,
+      '-H=0.0.0.0:2376']
+    args: [daemon, --log-opt, max-size=25m, --log-opt, max-file=2, -s, overlay, -G, docker, -H, 'unix:///var/run/docker.sock', --userland-proxy=false]
